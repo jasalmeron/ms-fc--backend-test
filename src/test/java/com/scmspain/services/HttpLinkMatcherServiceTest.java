@@ -12,25 +12,25 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.*;
 
 @RunWith(MockitoJUnitRunner.class)
-public class URLMatcherServiceTest {
+public class HttpLinkMatcherServiceTest {
 
     public static final String MERISTATION_UNSECURE_URL = "http://www.meristation.com";
     public static final String MERISTATION_SECURE_URL = "https://www.meristation.com";
 
     @InjectMocks
-    URLMatcherService urlMatcherService;
+    HttpLinkMatcherService httpLinkMatcherService;
 
     @Before
     public void setup() {
-        urlMatcherService.init();
+        httpLinkMatcherService.init();
     }
 
     @Test
     public void shouldNotDetectAnyURL() {
         // Given
-        List<String> texts = Arrays.asList("More news at Bloomberg", "I'm going to read more about HTTP protocol", "");
+        List<String> texts = Arrays.asList("Just a short sentence", "I'm going to read more about HTTP protocol", "https://", "http://", "http:/", " http:// ");
         // When
-        long numberOfTextWithUrls = texts.stream().mapToInt(text -> urlMatcherService.match(text)).sum();
+        long numberOfTextWithUrls = texts.stream().mapToInt(text -> httpLinkMatcherService.match(text)).sum();
         // Then
         assertThat(numberOfTextWithUrls).isEqualTo(0L);
     }
@@ -41,7 +41,7 @@ public class URLMatcherServiceTest {
         int totalUrlsLength = MERISTATION_UNSECURE_URL.length() + MERISTATION_SECURE_URL.length();
         List<String> texts = Arrays.asList(MERISTATION_UNSECURE_URL, MERISTATION_SECURE_URL + " is one of the best spanish videogames site");
         // When
-        long totalUrlLength = texts.stream().mapToInt(text -> urlMatcherService.match(text)).sum();
+        long totalUrlLength = texts.stream().mapToInt(text -> httpLinkMatcherService.match(text)).sum();
         // Then
         assertThat(totalUrlLength).isEqualTo(totalUrlsLength);
     }
@@ -52,7 +52,7 @@ public class URLMatcherServiceTest {
         int totalUrlsLength = MERISTATION_UNSECURE_URL.length() + MERISTATION_SECURE_URL.length();
         List<String> texts = Arrays.asList(MERISTATION_UNSECURE_URL.toUpperCase(), MERISTATION_SECURE_URL.toUpperCase() + " is one of the best spanish videogames site");
         // When
-        long totalUrlLength = texts.stream().mapToInt(text -> urlMatcherService.match(text)).sum();
+        long totalUrlLength = texts.stream().mapToInt(text -> httpLinkMatcherService.match(text)).sum();
         // Then
         assertThat(totalUrlLength).isEqualTo(totalUrlsLength);
     }
@@ -64,7 +64,7 @@ public class URLMatcherServiceTest {
         List<String> texts = Arrays.asList("http url:" + MERISTATION_UNSECURE_URL + " in the middle of this text",
                 "Obviously " + MERISTATION_SECURE_URL + " is one of the best spanish videogames site");
         // When
-        long totalUrlLength = texts.stream().mapToInt(text -> urlMatcherService.match(text)).sum();
+        long totalUrlLength = texts.stream().mapToInt(text -> httpLinkMatcherService.match(text)).sum();
         // Then
         assertThat(totalUrlLength).isEqualTo(totalUrlsLength);
     }
@@ -76,7 +76,7 @@ public class URLMatcherServiceTest {
         List<String> texts = Arrays.asList("http url:" + MERISTATION_SECURE_URL + " in the middle of this text",
                 "Obviously " + MERISTATION_UNSECURE_URL + " is one of the best spanish videogames site");
         // When
-        long totalUrlLength = texts.stream().mapToInt(text -> urlMatcherService.match(text)).sum();
+        long totalUrlLength = texts.stream().mapToInt(text -> httpLinkMatcherService.match(text)).sum();
         // Then
         assertThat(totalUrlLength).isEqualTo(totalUrlsLength);
     }
@@ -88,7 +88,7 @@ public class URLMatcherServiceTest {
         List<String> texts = Arrays.asList("http url:" + MERISTATION_SECURE_URL + " and " + MERISTATION_SECURE_URL,
                 "Obviously " + MERISTATION_SECURE_URL + " and " + MERISTATION_SECURE_URL +" is one of the best spanish videogames site");
         // When
-        long totalUrlLength = texts.stream().mapToInt(text -> urlMatcherService.match(text)).sum();
+        long totalUrlLength = texts.stream().mapToInt(text -> httpLinkMatcherService.match(text)).sum();
         // Then
         assertThat(totalUrlLength).isEqualTo(totalUrlsLength);
     }

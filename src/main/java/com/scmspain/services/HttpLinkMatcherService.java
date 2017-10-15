@@ -11,25 +11,24 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
-public class URLMatcherService {
+public class HttpLinkMatcherService {
 
-    private final static Logger LOGGER = LoggerFactory.getLogger(URLMatcherService.class);
+    private final static Logger LOGGER = LoggerFactory.getLogger(HttpLinkMatcherService.class);
 
     Pattern urlPattern;
 
     @PostConstruct
     public void init() {
         // TODO define pattern to detect URLs
-        urlPattern = Pattern.compile("http(s)?:\\S+", Pattern.CASE_INSENSITIVE);
+        urlPattern = Pattern.compile("http(s)?://\\S+", Pattern.CASE_INSENSITIVE);
     }
 
     /**
-     *
+     * Detects if there are http links given a text and returns the total length of them
      * @param text
-     * @return
+     * @return sum of the total lengths of found http links
      */
     public int match(String text) {
-        //TODO implement!
         Matcher matcher = urlPattern.matcher(text);
         List<String> matches = getMatches(matcher);
         return getTotalMatchesLength(matches);
