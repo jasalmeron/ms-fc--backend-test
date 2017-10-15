@@ -16,6 +16,7 @@ public class URLMatcherServiceTest {
 
     public static final String MERISTATION_UNSECURE_URL = "http://www.meristation.com";
     public static final String MERISTATION_SECURE_URL = "https://www.meristation.com";
+
     @InjectMocks
     URLMatcherService urlMatcherService;
 
