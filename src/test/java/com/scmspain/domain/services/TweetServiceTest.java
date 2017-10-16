@@ -1,6 +1,7 @@
-package com.scmspain.services;
+package com.scmspain.domain.services;
 
-import com.scmspain.entities.Tweet;
+import com.scmspain.domain.entities.Tweet;
+import com.scmspain.domain.validation.TweetValidator;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.boot.actuate.metrics.writer.MetricWriter;
@@ -15,13 +16,16 @@ public class TweetServiceTest {
     private EntityManager entityManager;
     private MetricWriter metricWriter;
     private TweetService tweetService;
+    private TweetValidator tweetValidator;
 
     @Before
     public void setUp() throws Exception {
         this.entityManager = mock(EntityManager.class);
         this.metricWriter = mock(MetricWriter.class);
+        this.tweetValidator = mock(TweetValidator.class);
 
-        this.tweetService = new TweetService(entityManager, metricWriter);
+
+        this.tweetService = new TweetService(entityManager, metricWriter, tweetValidator);
     }
 
     @Test

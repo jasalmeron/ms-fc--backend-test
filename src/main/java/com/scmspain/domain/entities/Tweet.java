@@ -1,4 +1,4 @@
-package com.scmspain.entities;
+package com.scmspain.domain.entities;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -12,12 +12,17 @@ public class Tweet {
     private Long id;
     @Column(nullable = false)
     private String publisher;
-    @Column(nullable = false, length = 140)
+    @Column(nullable = false, length = 512)
     private String tweet;
     @Column (nullable=true)
     private Long pre2015MigrationStatus = 0L;
 
     public Tweet() {
+    }
+
+    public Tweet(String publisher, String tweet) {
+        this.publisher = publisher;
+        this.tweet = tweet;
     }
 
     public Long getId() {

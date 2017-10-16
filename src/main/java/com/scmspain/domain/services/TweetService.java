@@ -1,6 +1,8 @@
-package com.scmspain.services;
+package com.scmspain.domain.services;
 
-import com.scmspain.entities.Tweet;
+import com.scmspain.domain.entities.Tweet;
+import com.scmspain.domain.validation.TweetValidator;
+import com.scmspain.domain.validation.TweetValidatorChain;
 import org.springframework.boot.actuate.metrics.writer.Delta;
 import org.springframework.boot.actuate.metrics.writer.MetricWriter;
 import org.springframework.stereotype.Service;
@@ -16,10 +18,12 @@ import java.util.List;
 public class TweetService {
     private EntityManager entityManager;
     private MetricWriter metricWriter;
+    private TweetValidator tweetValidator;
 
-    public TweetService(EntityManager entityManager, MetricWriter metricWriter) {
+    public TweetService(EntityManager entityManager, MetricWriter metricWriter, TweetValidator tweetValidatorChain) {
         this.entityManager = entityManager;
         this.metricWriter = metricWriter;
+        this.tweetValidator = tweetValidatorChain;
     }
 
     /**
@@ -29,17 +33,12 @@ public class TweetService {
       Result - recovered Tweet
     */
     public void publishTweet(String publisher, String text) {
-        if (publisher != null && publisher.length() > 0 && text != null && text.length() > 0 && text.length() < 140) {
-            Tweet tweet = new Tweet();
-            tweet.setTweet(text);
-            tweet.setPublisher(publisher);
-
-            this.metricWriter.increment(new Delta<Number>("published-tweets", 1));
-            this.entityManager.persist(tweet);
-        } else {
-            throw new IllegalArgumentException("Tweet must not be greater than 140 characters");
-        }
+        Tweet tweet = new Tweet(publisher, text);
+        tweetValidator.validate(tweet);
+        this.metricWriter.increment(new Delta<Number>("published-tweets", 1));
+        this.entityManager.persist(tweet);
     }
+
 
     /**
       Recover tweet from repository

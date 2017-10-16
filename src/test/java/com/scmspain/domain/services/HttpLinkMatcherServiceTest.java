@@ -1,4 +1,4 @@
-package com.scmspain.services;
+package com.scmspain.domain.services;
 
 import org.junit.Before;
 import org.junit.Test;

@@ -42,8 +42,14 @@ public class TweetControllerTest {
     }
 
     @Test
-    public void shouldReturn400WhenInsertingAnInvalidTweet() throws Exception {
+    public void shouldReturn400WhenInsertingAValidTweetWithLink() throws Exception {
         mockMvc.perform(newTweet("Schibsted Spain", "We are Schibsted Spain (look at our home page http://www.schibsted.es/), we own Vibbo, InfoJobs, fotocasa, coches.net and milanuncios. Welcome!"))
+                .andExpect(status().is(201));
+    }
+
+    @Test
+    public void shouldReturn400WhenInsertingAnInvalidTweet() throws Exception {
+        mockMvc.perform(newTweet("Schibsted Spain", "We are Schibsted Spain (look at our home page http://www.schibsted.es/), we own Vibbo, InfoJobs, fotocasa, coches.net and milanuncios. Welcome! For more information please refer to http://www.schibsted.es/faq or email us at contact@schibsted.es"))
                 .andExpect(status().is(400));
     }
 

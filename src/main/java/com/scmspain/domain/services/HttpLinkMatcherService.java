@@ -1,4 +1,4 @@
-package com.scmspain.services;
+package com.scmspain.domain.services;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +19,6 @@ public class HttpLinkMatcherService {
 
     @PostConstruct
     public void init() {
-        // TODO define pattern to detect URLs
         urlPattern = Pattern.compile("http(s)?://\\S+", Pattern.CASE_INSENSITIVE);
     }
 
