@@ -1,13 +1,18 @@
 package com.scmspain.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scmspain.configuration.TestConfiguration;
+import com.scmspain.controller.command.DiscardTweetCommand;
+import com.scmspain.domain.entities.Tweet;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -25,10 +30,12 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppC
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 public class TweetControllerTest {
     @Autowired
     private WebApplicationContext context;
     private MockMvc mockMvc;
+    private ObjectMapper objectMapper = new ObjectMapper();
 
     @Before
     public void setUp() {
@@ -38,7 +45,7 @@ public class TweetControllerTest {
     @Test
     public void shouldReturn200WhenInsertingAValidTweet() throws Exception {
         mockMvc.perform(newTweet("Prospect", "Breaking the law"))
-            .andExpect(status().is(201));
+                .andExpect(status().is(201));
     }
 
     @Test
@@ -66,10 +73,57 @@ public class TweetControllerTest {
         assertThat(new ObjectMapper().readValue(content, List.class).size()).isEqualTo(1);
     }
 
+    @Test
+    public void shoulReturn200DiscardingAPublishedTweet() throws Exception {
+        mockMvc.perform(newTweet("Yo", "How are you?"))
+                .andExpect(status().is(201));
+        MvcResult getResult = mockMvc.perform(get("/tweet"))
+                .andExpect(status().is(200))
+                .andReturn();
+        String content = getResult.getResponse().getContentAsString();
+        List<Tweet> list = objectMapper.readValue(content, new TypeReference<List<Tweet>>() {
+        });
+        mockMvc.perform(discardTweet(list.get(0).getId()))
+                .andExpect(status().is(200))
+                .andReturn();
+    }
+
+    @Test
+    public void shouldReturnAllDiscardedTweets() throws Exception {
+
+        mockMvc.perform(newTweet("Yo", "How are you?"))
+                .andExpect(status().is(201));
+        MvcResult getResult = mockMvc.perform(get("/tweet"))
+                .andExpect(status().is(200))
+                .andReturn();
+        String content = getResult.getResponse().getContentAsString();
+        List<Tweet> list = objectMapper.readValue(content, new TypeReference<List<Tweet>>() {
+        });
+        mockMvc.perform(discardTweet(list.get(0).getId()))
+                .andExpect(status().is(200))
+                .andReturn();
+        MvcResult getDiscardedResult = mockMvc.perform(get("/discarded"))
+                .andExpect(status().is(200))
+                .andReturn();
+        content = getDiscardedResult.getResponse().getContentAsString();
+        List<Tweet> discardedTweets = objectMapper.readValue(content, new TypeReference<List<Tweet>>() {
+        });
+
+        assertThat(discardedTweets.size()).isEqualTo(1);
+    }
+
     private MockHttpServletRequestBuilder newTweet(String publisher, String tweet) {
         return post("/tweet")
                 .contentType(MediaType.APPLICATION_JSON_UTF8)
                 .content(format("{\"publisher\": \"%s\", \"tweet\": \"%s\"}", publisher, tweet));
+    }
+
+    private MockHttpServletRequestBuilder discardTweet(Long tweetId) throws JsonProcessingException {
+        DiscardTweetCommand discardTweetCommand = new DiscardTweetCommand();
+        discardTweetCommand.setTweet(tweetId);
+        return post("/discarded")
+                .contentType(MediaType.APPLICATION_JSON_UTF8)
+                .content(objectMapper.writeValueAsString(discardTweetCommand));
     }
 
 }
