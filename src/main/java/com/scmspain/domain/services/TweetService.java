@@ -1,19 +1,17 @@
 package com.scmspain.domain.services;
 
 import com.scmspain.domain.entities.Tweet;
+import com.scmspain.domain.exception.TweetNotFoundException;
 import com.scmspain.domain.validation.TweetValidator;
-import com.scmspain.domain.validation.TweetValidatorChain;
 import org.springframework.boot.actuate.metrics.writer.Delta;
 import org.springframework.boot.actuate.metrics.writer.MetricWriter;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.support.TransactionSynchronizationAdapter;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.Assert;
 
 import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
 import javax.transaction.Transactional;
-import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @Service
@@ -57,7 +55,11 @@ public class TweetService {
      * Result - retrieved list of published Tweet
      */
     public List<Tweet> listAllTweets() {
-        List<Tweet> tweets = listTweets(false);
+
+        TypedQuery<Tweet> query = this.entityManager.createQuery("SELECT tweet FROM Tweet AS tweet WHERE pre2015MigrationStatus<> :status AND discarded= :discarded ORDER BY publicationDate DESC", Tweet.class);
+        query.setParameter("status", 99L);
+        query.setParameter("discarded", false );
+        List<Tweet> tweets = query.getResultList();
         this.metricWriter.increment(new Delta<Number>("times-queried-tweets", 1));
         return tweets;
     }
@@ -67,13 +69,12 @@ public class TweetService {
      * @return retrieved list of discarded Tweet
      */
     public List<Tweet> listAllDiscardedTweets() {
-        List<Tweet> tweets = listTweets(true);
+        TypedQuery<Tweet> query = this.entityManager.createQuery("SELECT tweet FROM Tweet AS tweet WHERE pre2015MigrationStatus<> :status AND discarded= :discarded ORDER BY discardedDate DESC", Tweet.class);
+        query.setParameter("status", 99L);
+        query.setParameter("discarded", true );
+        List<Tweet> discardedTweets = query.getResultList();
         this.metricWriter.increment(new Delta<Number>("times-queried-ignored-tweets", 1));
-        return tweets;
-    }
-
-    private List<Tweet> listTweets(boolean ignored) {
-        return this.entityManager.createQuery("SELECT tweet FROM Tweet AS tweet WHERE pre2015MigrationStatus<>99 AND discarded=" + ignored +" ORDER BY id DESC", Tweet.class).getResultList();
+        return discardedTweets;
     }
 
     /**
@@ -83,7 +84,11 @@ public class TweetService {
     public void discardTweet(Long id) {
         Assert.notNull(id, "id can't be null to delete a tweet");
         Tweet tweet = getTweet(id);
+        if(tweet == null) {
+            throw new TweetNotFoundException(id);
+        }
         tweet.setDiscarded(true);
+        tweet.setDiscardedDate(new Date());
         this.entityManager.merge(tweet);
         metricWriter.increment(new Delta<Number>("published-tweets", -1));
     }

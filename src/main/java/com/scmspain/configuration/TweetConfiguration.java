@@ -7,12 +7,10 @@ import com.scmspain.domain.validation.TweetPublisherValidator;
 import com.scmspain.domain.validation.TweetTextValidator;
 import com.scmspain.domain.validation.TweetValidator;
 import com.scmspain.domain.validation.TweetValidatorChain;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.actuate.metrics.writer.MetricWriter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 
 import javax.persistence.EntityManager;
 
