@@ -65,7 +65,7 @@ public class TweetControllerTest {
 
     @Test
     public void shouldReturnAllPublishedTweetsSortedByPublishDateDesc() throws Exception {
-        IntStream.range(1, 4).forEach(i -> buildPublishTweet(i));
+        IntStream.range(1, 4).forEach(i -> publishTweet(i));
         String content = getTweets().getResponse().getContentAsString();
         List<Tweet> list = objectMapper.readValue(content, new TypeReference<List<Tweet>>() {
         });
@@ -76,7 +76,7 @@ public class TweetControllerTest {
 
     @Test
     public void shouldReturn200DiscardingAPublishedTweet() throws Exception {
-        buildPublishTweet();
+        publishTweet();
         List<Tweet> list = getAllTweets();
         mockMvc.perform(discardTweetBuilder(list.get(0).getId()))
                 .andExpect(status().is(200))
@@ -93,7 +93,7 @@ public class TweetControllerTest {
     @Test
     public void shouldReturnAllDiscardedTweetsSortedByDiscardedDateAnZeroPublishedTweets() throws Exception {
         // Given
-        IntStream.range(1, 4).forEach(i -> buildPublishTweet(i));
+        IntStream.range(1, 4).forEach(i -> publishTweet(i));
         getAllTweets().forEach(tweet -> discardTweet(tweet.getId()));
 
         // When
@@ -123,11 +123,11 @@ public class TweetControllerTest {
                 .andReturn();
     }
 
-    private void buildPublishTweet() {
-        buildPublishTweet(1);
+    private void publishTweet() {
+        publishTweet(1);
     }
 
-    private void buildPublishTweet(int number) {
+    private void publishTweet(int number) {
         try {
             mockMvc.perform(publishTweetBuilder("Yo", "Tweet " + number))
                     .andExpect(status().is(201));
