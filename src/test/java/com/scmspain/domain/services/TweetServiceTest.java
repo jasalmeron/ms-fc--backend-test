@@ -1,11 +1,10 @@
 package com.scmspain.domain.services;
 
 import com.scmspain.domain.entities.Tweet;
+import com.scmspain.domain.exception.TweetNotFoundException;
 import com.scmspain.domain.validation.TweetValidator;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
@@ -15,7 +14,7 @@ import org.springframework.boot.actuate.metrics.writer.MetricWriter;
 
 import javax.persistence.EntityManager;
 
-import java.util.List;
+import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
@@ -26,7 +25,7 @@ import static org.mockito.Mockito.*;
 public class TweetServiceTest {
     private EntityManager entityManager;
     private MetricWriter metricWriter;
-    private TweetService tweetService;
+    private TweetService testSubject;
     private TweetValidator tweetValidator;
 
     @Captor
@@ -40,12 +39,15 @@ public class TweetServiceTest {
         this.entityManager = mock(EntityManager.class);
         this.metricWriter = mock(MetricWriter.class);
         this.tweetValidator = mock(TweetValidator.class);
-        this.tweetService = new TweetService(entityManager, metricWriter, tweetValidator);
+        this.testSubject = new TweetService(entityManager, metricWriter, tweetValidator);
     }
 
     @Test
     public void shouldInsertANewTweet() throws Exception {
-        tweetService.publishTweet("Guybrush Threepwood", "I am Guybrush Threepwood, mighty pirate.");
+        // When
+        testSubject.publishTweet("Guybrush Threepwood", "I am Guybrush Threepwood, mighty pirate.");
+
+        // Then
         verify(metricWriter).increment(deltaCaptor.capture());
         verify(entityManager).persist(any(Tweet.class));
         Delta<Number> delta = deltaCaptor.getValue();
@@ -56,12 +58,12 @@ public class TweetServiceTest {
     @Test
     public void shouldDiscardATweet() {
         // Given
-        tweetService.publishTweet("Guybrush Threepwood", "I am Guybrush Threepwood, mighty pirate.");
-
+        testSubject.publishTweet("Guybrush Threepwood", "I am Guybrush Threepwood, mighty pirate.");
         given(this.entityManager.find(eq(Tweet.class), eq(1L))).willReturn(new Tweet(1L));
 
         // When
-        tweetService.discardTweet(1L);
+        testSubject.discardTweet(1L);
+
         // Then
         verify(metricWriter, times(2)).increment(deltaCaptor.capture());
         verify(entityManager).merge(tweetCaptor.capture());
@@ -70,11 +72,17 @@ public class TweetServiceTest {
         assertThat(delta.getName()).isEqualTo("published-tweets");
         Tweet mergedTweet = tweetCaptor.getValue();
         assertThat(mergedTweet.isDiscarded()).isEqualTo(true);
+        assertThat(mergedTweet.getDiscardedDate()).isCloseTo(new Date(), 1000);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void shouldThrowAnExceptionWhenTweetLengthIsInvalid() throws Exception {
         doThrow(IllegalArgumentException.class).when(tweetValidator).validate(any(Tweet.class));
-        tweetService.publishTweet("Pirate", "LeChuck? He's the guy that went to the Governor's for dinner and never wanted to leave. He fell for her in a big way, but she told him to drop dead. So he did. Then things really got ugly.");
+        testSubject.publishTweet("Pirate", "LeChuck? He's the guy that went to the Governor's for dinner and never wanted to leave. He fell for her in a big way, but she told him to drop dead. So he did. Then things really got ugly.");
+    }
+
+    @Test(expected = TweetNotFoundException.class)
+    public void shouldThownAnExceptionIfDiscardedTweetDoesntExist() {
+        testSubject.discardTweet(1L);
     }
 }

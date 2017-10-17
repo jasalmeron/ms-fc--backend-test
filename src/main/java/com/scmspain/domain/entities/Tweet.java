@@ -1,12 +1,13 @@
 package com.scmspain.domain.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
+import javax.persistence.*;
+import java.util.Date;
 
+@EntityListeners(AuditingEntityListener.class)
 @Entity
 public class Tweet {
     @Id
@@ -21,6 +22,13 @@ public class Tweet {
     @JsonIgnore
     @Column(nullable = false)
     private boolean discarded = false;
+
+    @CreatedDate
+    @Column(nullable = false)
+    private Date publicationDate;
+
+    @Column
+    private Date discardedDate;
 
     public Tweet() {
     }
@@ -72,5 +80,21 @@ public class Tweet {
 
     public void setDiscarded(boolean discarded) {
         this.discarded = discarded;
+    }
+
+    public Date getPublicationDate() {
+        return publicationDate;
+    }
+
+    public void setPublicationDate(Date publicationDate) {
+        this.publicationDate = publicationDate;
+    }
+
+    public Date getDiscardedDate() {
+        return discardedDate;
+    }
+
+    public void setDiscardedDate(Date discardedDate) {
+        this.discardedDate = discardedDate;
     }
 }

@@ -3,6 +3,8 @@ package com.scmspain.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.scmspain.comparator.DiscardedDateDescComparator;
+import com.scmspain.comparator.PublicateDateDescComparator;
 import com.scmspain.configuration.TestConfiguration;
 import com.scmspain.controller.command.DiscardTweetCommand;
 import com.scmspain.domain.entities.Tweet;
@@ -20,6 +22,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.web.context.WebApplicationContext;
 
 import java.util.List;
+import java.util.stream.IntStream;
 
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,81 +47,111 @@ public class TweetControllerTest {
 
     @Test
     public void shouldReturn200WhenInsertingAValidTweet() throws Exception {
-        mockMvc.perform(newTweet("Prospect", "Breaking the law"))
+        mockMvc.perform(publishTweetBuilder("Prospect", "Breaking the law"))
                 .andExpect(status().is(201));
     }
 
     @Test
     public void shouldReturn400WhenInsertingAValidTweetWithLink() throws Exception {
-        mockMvc.perform(newTweet("Schibsted Spain", "We are Schibsted Spain (look at our home page http://www.schibsted.es/), we own Vibbo, InfoJobs, fotocasa, coches.net and milanuncios. Welcome!"))
+        mockMvc.perform(publishTweetBuilder("Schibsted Spain", "We are Schibsted Spain (look at our home page http://www.schibsted.es/), we own Vibbo, InfoJobs, fotocasa, coches.net and milanuncios. Welcome!"))
                 .andExpect(status().is(201));
     }
 
     @Test
     public void shouldReturn400WhenInsertingAnInvalidTweet() throws Exception {
-        mockMvc.perform(newTweet("Schibsted Spain", "We are Schibsted Spain (look at our home page http://www.schibsted.es/), we own Vibbo, InfoJobs, fotocasa, coches.net and milanuncios. Welcome! For more information please refer to http://www.schibsted.es/faq or email us at contact@schibsted.es"))
+        mockMvc.perform(publishTweetBuilder("Schibsted Spain", "We are Schibsted Spain (look at our home page http://www.schibsted.es/), we own Vibbo, InfoJobs, fotocasa, coches.net and milanuncios. Welcome! For more information please refer to http://www.schibsted.es/faq or email us at contact@schibsted.es"))
                 .andExpect(status().is(400));
     }
 
     @Test
-    public void shouldReturnAllPublishedTweets() throws Exception {
-        mockMvc.perform(newTweet("Yo", "How are you?"))
-                .andExpect(status().is(201));
-
-        MvcResult getResult = mockMvc.perform(get("/tweet"))
-                .andExpect(status().is(200))
-                .andReturn();
-
-        String content = getResult.getResponse().getContentAsString();
-        assertThat(new ObjectMapper().readValue(content, List.class).size()).isEqualTo(1);
-    }
-
-    @Test
-    public void shoulReturn200DiscardingAPublishedTweet() throws Exception {
-        mockMvc.perform(newTweet("Yo", "How are you?"))
-                .andExpect(status().is(201));
-        MvcResult getResult = mockMvc.perform(get("/tweet"))
-                .andExpect(status().is(200))
-                .andReturn();
-        String content = getResult.getResponse().getContentAsString();
+    public void shouldReturnAllPublishedTweetsSortedByPublishDateDesc() throws Exception {
+        IntStream.range(1, 4).forEach(i -> buildPublishTweet(i));
+        String content = getTweets().getResponse().getContentAsString();
         List<Tweet> list = objectMapper.readValue(content, new TypeReference<List<Tweet>>() {
         });
-        mockMvc.perform(discardTweet(list.get(0).getId()))
+        assertThat(list.size()).isEqualTo(3);
+        assertThat(list).isSortedAccordingTo(new PublicateDateDescComparator());
+    }
+
+
+    @Test
+    public void shouldReturn200DiscardingAPublishedTweet() throws Exception {
+        buildPublishTweet();
+        List<Tweet> list = getAllTweets();
+        mockMvc.perform(discardTweetBuilder(list.get(0).getId()))
                 .andExpect(status().is(200))
                 .andReturn();
     }
 
     @Test
-    public void shouldReturnAllDiscardedTweets() throws Exception {
+    public void shouldReturn404DiscardingAnUncreatedTweet() throws Exception {
+        mockMvc.perform(discardTweetBuilder(2L))
+                .andExpect(status().is(404))
+                .andReturn();
+    }
 
-        mockMvc.perform(newTweet("Yo", "How are you?"))
-                .andExpect(status().is(201));
-        MvcResult getResult = mockMvc.perform(get("/tweet"))
-                .andExpect(status().is(200))
-                .andReturn();
-        String content = getResult.getResponse().getContentAsString();
-        List<Tweet> list = objectMapper.readValue(content, new TypeReference<List<Tweet>>() {
-        });
-        mockMvc.perform(discardTweet(list.get(0).getId()))
-                .andExpect(status().is(200))
-                .andReturn();
+    @Test
+    public void shouldReturnAllDiscardedTweetsSortedByDiscardedDateAnZeroPublishedTweets() throws Exception {
+        // Given
+        IntStream.range(1, 4).forEach(i -> buildPublishTweet(i));
+        getAllTweets().forEach(tweet -> discardTweet(tweet.getId()));
+
+        // When
         MvcResult getDiscardedResult = mockMvc.perform(get("/discarded"))
                 .andExpect(status().is(200))
                 .andReturn();
-        content = getDiscardedResult.getResponse().getContentAsString();
+        String content = getDiscardedResult.getResponse().getContentAsString();
         List<Tweet> discardedTweets = objectMapper.readValue(content, new TypeReference<List<Tweet>>() {
         });
+        List<Tweet> allTweets = getAllTweets();
 
-        assertThat(discardedTweets.size()).isEqualTo(1);
+        // Then
+        assertThat(discardedTweets.size()).isEqualTo(3);
+        assertThat(discardedTweets).isSortedAccordingTo(new DiscardedDateDescComparator());
+        assertThat(allTweets.size()).isEqualTo(0);
     }
 
-    private MockHttpServletRequestBuilder newTweet(String publisher, String tweet) {
+    private List<Tweet> getAllTweets() throws Exception {
+        String content = getTweets().getResponse().getContentAsString();
+        return objectMapper.readValue(content, new TypeReference<List<Tweet>>() {
+        });
+    }
+
+    private MvcResult getTweets() throws Exception {
+        return mockMvc.perform(get("/tweet"))
+                .andExpect(status().is(200))
+                .andReturn();
+    }
+
+    private void buildPublishTweet() {
+        buildPublishTweet(1);
+    }
+
+    private void buildPublishTweet(int number) {
+        try {
+            mockMvc.perform(publishTweetBuilder("Yo", "Tweet " + number))
+                    .andExpect(status().is(201));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private MockHttpServletRequestBuilder publishTweetBuilder(String publisher, String tweet) {
         return post("/tweet")
                 .contentType(MediaType.APPLICATION_JSON_UTF8)
                 .content(format("{\"publisher\": \"%s\", \"tweet\": \"%s\"}", publisher, tweet));
     }
 
-    private MockHttpServletRequestBuilder discardTweet(Long tweetId) throws JsonProcessingException {
+    private void discardTweet(Long number) {
+        try {
+            mockMvc.perform(discardTweetBuilder(number))
+                    .andExpect(status().is(200));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private MockHttpServletRequestBuilder discardTweetBuilder(Long tweetId) throws JsonProcessingException {
         DiscardTweetCommand discardTweetCommand = new DiscardTweetCommand();
         discardTweetCommand.setTweet(tweetId);
         return post("/discarded")
